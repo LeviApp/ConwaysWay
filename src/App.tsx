@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, use } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import Light from "./components/Light.tsx"
 import {Cell} from "./classes/Cell.tsx";
-
-import "react";
+import { createGridStructure, calculateNextGridStatus } from "./functions/CreateNeighbors.tsx";
 
 declare module 'react' {
   interface CSSProperties {
@@ -13,73 +12,77 @@ declare module 'react' {
   }
 }
 
+type CellStructure = {
+  neighbors: number[];
+};
+
 
 function App() {
   const [grid, setGrid] = useState<Cell[]>([])
   const [gridSize, setGridSize] = useState(48)
   const [generation, setGeneration] = useState(0)
   const [reset, setReset] = useState(false)
+  const [pause, setPause] = useState(false)
 
+  const gridStructureRef = useRef<Record<number, CellStructure>>({}); 
+  const [gridStatus, setGridStatus] = useState<number[]>([]); 
 
   const gridSizeUpdate = (event: any) => {
+    setPause(false)
     setGridSize(Number(event.target.value));
   };
 
   const createGrid = (gridSize: number) => {
-    const calculatedGrid: Cell[] = [];
-    const randomIds = [];
 
-    for (let i = 0; i <= Math.ceil((gridSize*gridSize)/3); i++) {
-      const randomNum = Math.floor(Math.random() * (gridSize*gridSize));
-        randomIds.push(randomNum);
+    // 1. Create and store the FIXED grid structure (neighbors map)
+    //    This is the heavy calculation that now only runs once when size changes.
+    gridStructureRef.current = createGridStructure(gridSize);
+        
+    // 2. Initialize the dynamic grid STATUS array (an array of 0s and 1s)
+    const totalCells = gridSize * gridSize;
+    const initialStatus = new Array(totalCells).fill(0); // Start all dead
+
+    // 3. Re-implement your randomization logic to modify the STATUS array
+    //    We no longer need the randomIds array, we can set the status directly.
+    
+    // Calculate how many cells to randomly set to "alive" (status 1)
+    const aliveCount = Math.ceil(totalCells / 3); 
+    
+    // Create a temporary array of IDs and shuffle them for randomization
+    const cellIds = Array.from({ length: totalCells }, (_, i) => i);
+    
+    // Simple shuffle (Fisher-Yates) for better randomness
+    for (let i = totalCells - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cellIds[i], cellIds[j]] = [cellIds[j], cellIds[i]];
     }
 
-    for (let i = 0; i < gridSize*gridSize; i++) {
-      let currentCell;
-      if (randomIds.includes(i)) {
-        currentCell = new Cell(i, 1, [], null);
-      }
-      else {
-        currentCell = new Cell(i, 0, [], null);
-      }
-      currentCell.createNeighbors(gridSize)
-      calculatedGrid.push(currentCell)
+    // Set the first 'aliveCount' cells to 1 (alive) in the initialStatus array
+    for (let i = 0; i < aliveCount; i++) {
+        const randomId = cellIds[i];
+        initialStatus[randomId] = 1; // 1 means alive, 0 means dead
     }
 
-    setGrid(calculatedGrid)
-    setGeneration(1)
-    setReset(false)
+
+    // 4. Update state with the new, random status array
+    setGridStatus(initialStatus); // Use the new state setter
+    
+    // 5. Reset loop controls
+    setGeneration(1);
+    setReset(false); 
   }
-
-  // 🛠️ NEW: This function calculates the next state based on the previous state.
-const calculateNextGrid = (currentGrid: Cell[], gridSize: number): Cell[] => {
-  const calculatedGrid = [];
-  let currentCell;
-
-  for (let i = 0; i < gridSize * gridSize; i++) {
-      // Crucially, it uses the 'currentGrid' passed to it.
-      const nextState = currentGrid[i].findNextGenerationState(currentGrid);
-      // Assuming Cell constructor is (id, status, neighbors, element)
-      currentCell = new Cell(i, nextState, [], null);
-      currentCell.createNeighbors(gridSize)
-
-      calculatedGrid.push(currentCell); 
-  }
-  return calculatedGrid;
-};
 
 // 🛠️ NEW: The function that runs the logic and updates the state.
-const runUpdate = (reset: boolean) => {
-  if (reset) {
-    createGrid(gridSize)
-  }
-  // Functional update for grid: Guarantees access to the latest 'grid' state (prevGrid).
-  setGrid(prevGrid => {
-      if (prevGrid.length === 0) return prevGrid; // Safety check
-      return calculateNextGrid(prevGrid, gridSize);
+const runUpdate = () => {
+  // ...
+  setGridStatus(prevStatus => {
+      if (prevStatus.length === 0) return prevStatus; 
+      
+      // ✅ FIX 2: Pass ONLY the required data (the structure object)
+      return calculateNextGridStatus(gridStructureRef.current, prevStatus); 
   });
 
-  // Functional update for generation: Guarantees access to the latest 'generation' state (prevGen).
+  // Functional update for generation: Guarantees access to the latest 'generation' state.
   setGeneration(prevGen => prevGen + 1);
 };
 
@@ -91,21 +94,28 @@ const runUpdate = (reset: boolean) => {
     let timerId: ReturnType<typeof setTimeout> | null = null; // Declare for cleanup
 
     // ⚠️ Safety: Only start the game loop after the initial grid has been created 
-    // and is no longer an empty array (and assuming 'reset' is false, if you use it).
-    if (grid.length > 0) { 
+    // and is no longer an empty array.
+    // ✅ Change 1: Check the length of the new state variable, gridStatus.
+    if (gridStatus.length > 0) { 
 
       // 1. Set up a single timer for the next game step.
       timerId = setTimeout(() => {
-        // 2. Call the update function. Since runUpdate modifies 'generation',
-        //    the effect will re-run automatically to schedule the NEXT step.
-        //    (Assuming runUpdate no longer requires gridSize as an argument)
-        runUpdate(reset); 
-      }, 100); // Using 100ms as per your original interval
+        // 2. Call the update function. 
+        // ✅ Change 3: Remove the 'reset' argument from runUpdate, 
+        //    as that logic is best handled outside the game loop.
+        if (reset) {
+          setPause(false)
+          createGrid(gridSize)
+        }
+        else if (!pause) {
+          console.log("RUNNING PAUSE!")
+          runUpdate(); 
+        }
+      }, 100); 
 
     }
 
-    // 🧹 Cleanup: This is CRITICAL. It clears the timer if the component unmounts 
-    // or if the dependencies change, preventing duplicate timers or leaks.
+    // 🧹 Cleanup: Clear the timer when the component unmounts or dependencies change.
     return () => {
       if (timerId) {
         clearTimeout(timerId);
@@ -113,10 +123,10 @@ const runUpdate = (reset: boolean) => {
     };
     
     // Dependencies: 
-    // 'generation' is the state modified by runUpdate, which triggers the next loop iteration.
-    // 'grid' is necessary for the initial length check.
+    // 'generation' triggers the next loop iteration after runUpdate.
     // 'runUpdate' is necessary because you call it inside the effect.
-  }, [generation, grid, runUpdate]); 
+    // ✅ Change 2: Replace 'grid' dependency with the new 'gridStatus' dependency.
+  }, [generation, gridStatus, runUpdate, pause, reset]); 
 
 
 
@@ -128,10 +138,12 @@ const runUpdate = (reset: boolean) => {
         <input type="range" min="4" max="100" onChange={gridSizeUpdate} />
       </section>
       <button onClick={() => setReset(true)}>Reset</button>
+      <button onClick={() => setPause(!pause)}>Pause</button>
+
       <h4>Generation: {generation}</h4>
       <section className="canvas" style={{ '--num-columns': gridSize }}>
-        {grid.map((val) => {
-          return <Light key={val.id} status={val.status} />;
+        {gridStatus.map((val, i) => {
+          return <Light key={i} status={val} />;
         })}
       </section>
       </div>
