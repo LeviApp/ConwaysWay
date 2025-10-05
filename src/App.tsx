@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 import Light from "./components/Light.tsx"
 import {Cell} from "./classes/Cell.tsx";
@@ -19,7 +17,6 @@ type CellStructure = {
 
 
 function App() {
-  const [grid, setGrid] = useState<Cell[]>([])
   const [gridSize, setGridSize] = useState(48)
   const [generation, setGeneration] = useState(0)
   const [reset, setReset] = useState(false)
