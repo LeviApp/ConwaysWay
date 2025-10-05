@@ -5,6 +5,7 @@ import './App.css'
 import Light from "./components/Light.tsx"
 import {Cell} from "./classes/Cell.tsx";
 import { createGridStructure, calculateNextGridStatus } from "./functions/CreateNeighbors.tsx";
+import logo from "./assets/ConwaysWayLogo.png"
 
 declare module 'react' {
   interface CSSProperties {
@@ -133,7 +134,9 @@ const runUpdate = () => {
   return (
     <>
       <div className="appWindow">
+        <img className="logo" src={logo} alt="" />
       <section className="slider">
+        <h4>Grid Size</h4>
         <h4>{gridSize}</h4>
         <input type="range" min="4" max="100" onChange={gridSizeUpdate} />
       </section>
