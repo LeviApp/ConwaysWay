@@ -1,0 +1,10 @@
+[build]
+base = "./"
+publish = "build/"
+command = "CI= yarn build"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
