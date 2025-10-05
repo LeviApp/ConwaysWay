@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import Light from "./components/Light.tsx"
-import {Cell} from "./classes/Cell.tsx";
 import { createGridStructure, calculateNextGridStatus } from "./functions/CreateNeighbors.tsx";
 import logo from "./assets/ConwaysWayLogo.png"
 
