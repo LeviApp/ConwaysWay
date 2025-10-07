@@ -8,14 +8,14 @@ interface MyComponentProps {
 }
 
 function Light({edit, status, editGridStatus, index}: MyComponentProps) {
-  const turnLight = (event: any) => {
+  const turnLight = () => {
     if (edit) {
       editGridStatus(index, status)
     }
   }
   return (
     <>
-        <div className={`${status ? 'light' : 'dark'} ${edit ? 'editMode' : ''}`} onMouseOver={(event) => turnLight(event)}>
+        <div className={`${status ? 'light' : 'dark'} ${edit ? 'editMode' : ''}`} onMouseOver={() => turnLight()}>
 
         </div>
     </>
