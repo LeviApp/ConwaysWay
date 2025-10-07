@@ -5,3 +5,7 @@
 .dark {
     background: black;
 }
+
+.editMode {
+    border: 1px solid white;
+}

@@ -20,6 +20,8 @@ function App() {
   const [generation, setGeneration] = useState(0)
   const [reset, setReset] = useState(false)
   const [pause, setPause] = useState(false)
+  const [edit, setEdit] = useState(false)
+
 
   const gridStructureRef = useRef<Record<number, CellStructure>>({}); 
   const [gridStatus, setGridStatus] = useState<number[]>([]); 
@@ -69,6 +71,29 @@ function App() {
     setReset(false); 
   }
 
+  const setEditVal = () => {
+    setEdit(prevEdit => {
+      if (!prevEdit) { // Check the value *before* the update (will be true)
+        const finalGridCopy = new Array(gridStatus.length).fill(0);
+        setGridStatus(finalGridCopy);
+      }
+      return !prevEdit; // Return the toggled value
+  });
+  }
+
+  const editGridStatus = (index: number, status: number) => {
+    const finalGridCopy = [...gridStatus];
+    let finalState;
+    if (status) {
+      finalState = 0;
+    }
+    else {
+      finalState = 1;
+    }
+      finalGridCopy[index] = finalState;
+      setGridStatus(finalGridCopy)
+  }
+
 // 🛠️ NEW: The function that runs the logic and updates the state.
 const runUpdate = () => {
   // ...
@@ -100,12 +125,15 @@ const runUpdate = () => {
         // 2. Call the update function. 
         // ✅ Change 3: Remove the 'reset' argument from runUpdate, 
         //    as that logic is best handled outside the game loop.
-        if (reset) {
+
+        if (reset || ( !edit && gridStatus.every((status) => status === 0))) {
+          setEdit(false)
           setPause(false)
           createGrid(gridSize)
         }
+        else if (edit) {
+         setGeneration(0)        }
         else if (!pause) {
-          console.log("RUNNING PAUSE!")
           runUpdate(); 
         }
       }, 100); 
@@ -123,7 +151,7 @@ const runUpdate = () => {
     // 'generation' triggers the next loop iteration after runUpdate.
     // 'runUpdate' is necessary because you call it inside the effect.
     // ✅ Change 2: Replace 'grid' dependency with the new 'gridStatus' dependency.
-  }, [generation, gridStatus, runUpdate, pause, reset]); 
+  }, [generation, gridStatus, runUpdate, pause, reset, edit]); 
 
 
 
@@ -137,12 +165,13 @@ const runUpdate = () => {
         <input type="range" min="4" max="100" onChange={gridSizeUpdate} />
       </section>
       <button onClick={() => setReset(true)}>Reset</button>
-      <button onClick={() => setPause(!pause)}>Pause</button>
+      <button onClick={() => setPause(!pause)}  className={pause ? "on" : ""}>Pause</button>
+      <button onClick={() => setEditVal()} className={edit ? "on" : ""}>Edit</button>
 
       <h4>Generation: {generation}</h4>
       <section className="canvas" style={{ '--num-columns': gridSize }}>
         {gridStatus.map((val, i) => {
-          return <Light key={i} status={val} />;
+          return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} />;
         })}
       </section>
       </div>

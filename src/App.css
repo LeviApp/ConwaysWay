@@ -4,6 +4,7 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .appWindow {
@@ -76,6 +77,6 @@ button {
   cursor: pointer;
 }
 
-button {
-  cursor: pointer;
+.on {
+  background: green;
 }
