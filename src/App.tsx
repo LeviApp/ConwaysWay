@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import Light from "./components/Light.tsx"
 import { createGridStructure, calculateNextGridStatus } from "./functions/CreateNeighbors.tsx";
@@ -23,8 +23,7 @@ function App() {
   const [edit, setEdit] = useState(false)
   const [speed, setSpeed] = useState(510)
   const [colors, setColors] = useState({ backgroundColor: "black", lightColor: "#FFD700"})
-
-
+  const [densityPercent, setDensityPercent] = useState(50); 
 
   const gridStructureRef = useRef<Record<number, CellStructure>>({});
   const [gridStatus, setGridStatus] = useState<number[]>([]);
@@ -48,7 +47,7 @@ function App() {
     //    We no longer need the randomIds array, we can set the status directly.
 
     // Calculate how many cells to randomly set to "alive" (status 1)
-    const aliveCount = Math.ceil(totalCells / 3);
+    const aliveCount = Math.ceil(totalCells * (densityPercent / 100)); 
 
     // Create a temporary array of IDs and shuffle them for randomization
     const cellIds = Array.from({ length: totalCells }, (_, i) => i);
@@ -98,22 +97,18 @@ function App() {
   }
 
   // 🛠️ NEW: The function that runs the logic and updates the state.
-  const runUpdate = () => {
-    // ...
+  const runUpdate = useCallback(() => {
     setGridStatus(prevStatus => {
       if (prevStatus.length === 0) return prevStatus;
-
-      // ✅ FIX 2: Pass ONLY the required data (the structure object)
+      // No change needed here, logic is sound.
       return calculateNextGridStatus(gridStructureRef.current, prevStatus);
     });
-
-    // Functional update for generation: Guarantees access to the latest 'generation' state.
     setGeneration(prevGen => prevGen + 1);
-  };
+  }, [gridStructureRef]); // Dependency: Only changes if the structure reference changes
 
   useEffect(() => {
     createGrid(gridSize)
-  }, [gridSize])
+  }, [gridSize, densityPercent])
 
   useEffect(() => {
     let timerId: ReturnType<typeof setTimeout> | null = null; // Declare for cleanup
@@ -155,7 +150,7 @@ function App() {
     // 'generation' triggers the next loop iteration after runUpdate.
     // 'runUpdate' is necessary because you call it inside the effect.
     // ✅ Change 2: Replace 'grid' dependency with the new 'gridStatus' dependency.
-  }, [generation, gridStatus, runUpdate, pause, reset, edit, speed]);
+  }, [generation, gridStatus, pause, reset, edit, speed]);
 
 
 
@@ -167,6 +162,11 @@ function App() {
           <h4>Grid Size</h4>
           <h4>{gridSize}</h4>
           <input type="range" min="4" max="100" onChange={gridSizeUpdate} />
+        </section>
+        <section className="slider">
+          <h4>Density</h4>
+          <h4>{densityPercent}%</h4>
+          <input type="range" min="0" max="100" onChange={(event) => setDensityPercent(Number(event.target.value))} />
         </section>
         <section className="slider">
           <h4>Speed</h4>
