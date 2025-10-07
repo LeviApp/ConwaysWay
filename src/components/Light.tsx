@@ -5,9 +5,10 @@ interface MyComponentProps {
     status: number;
     editGridStatus: any;
     index: number;
+    colors: { backgroundColor: string, lightColor: string }
 }
 
-function Light({edit, status, editGridStatus, index}: MyComponentProps) {
+function Light({edit, status, editGridStatus, index, colors}: MyComponentProps) {
   const turnLight = () => {
     if (edit) {
       editGridStatus(index, status)
@@ -15,7 +16,7 @@ function Light({edit, status, editGridStatus, index}: MyComponentProps) {
   }
   return (
     <>
-        <div className={`${status ? 'light' : 'dark'} ${edit ? 'editMode' : ''}`} onMouseOver={() => turnLight()}>
+        <div className={`${edit ? 'editMode' : ''}`}   style={ status ? { backgroundColor: colors.lightColor } : { backgroundColor: colors.backgroundColor }} onMouseOver={() => turnLight()}>
 
         </div>
     </>

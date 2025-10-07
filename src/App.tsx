@@ -22,6 +22,7 @@ function App() {
   const [pause, setPause] = useState(false)
   const [edit, setEdit] = useState(false)
   const [speed, setSpeed] = useState(510)
+  const [colors, setColors] = useState({ backgroundColor: "black", lightColor: "#FFD700"})
 
 
 
@@ -183,14 +184,21 @@ function App() {
 
           // 3. Update the 'speed' state
           setSpeed(newSpeed);
-        }} />        </section>
+        }} />        
+        </section>
+        <section className="colors">
+          <h4>Background Color</h4>
+          <input onChange={(event) => setColors({...colors, backgroundColor: event.target.value})} type="color" />
+          <h4>Light Color</h4>
+          <input onChange={(event) => setColors({...colors, lightColor: event.target.value})} type="color" value={colors.lightColor} />
+        </section>
         <button onClick={() => setReset(true)}>Reset</button>
         <button onClick={() => setPause(!pause)} className={pause ? "on" : ""}>Pause</button>
         <button onClick={() => setEditVal()} className={edit ? "on" : ""}>Edit</button>
         <h4>Generation: {generation}</h4>
         <section className="canvas" style={{ '--num-columns': gridSize }}>
           {gridStatus.map((val, i) => {
-            return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} />;
+            return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} colors={colors} />;
           })}
         </section>
       </div>
