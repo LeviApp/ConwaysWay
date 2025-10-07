@@ -77,6 +77,10 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  opacity: 0.5;
+}
+
 .on {
   background: green;
 }
