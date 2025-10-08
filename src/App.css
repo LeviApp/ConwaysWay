@@ -14,30 +14,10 @@
 
 .logo {
   width: 25%;
-  border-bottom: 5px solid black;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+  height: auto;
+  padding-right: 100px;
+  margin-right: 20px;
+  object-fit: contain;
 }
 
 .card {
@@ -54,14 +34,26 @@
   min-height: 75vh; /* Gives the grid container height */
 }
 
-h4 {
+h4, p {
   font-size: 1.5rem;
   margin: 0;
   margin: 10px 0;
 }
 
 .slider {
+  display: flex;
+  flex-direction: row;
   width: 100%;
+}
+
+.slider h4,p {
+  width: 25%;
+  text-align: left;
+}
+
+
+.slider input[type="range"] {
+  margin: 0 20px;
 }
 
 input[type="range"] {
@@ -83,4 +75,90 @@ button:disabled {
 
 .on {
   background: green;
+}
+
+.upper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-around;
+  padding-bottom: 20px;
+  border-bottom: 5px solid black;
+}
+
+.lower {
+  padding-top: 20px;
+
+}
+
+.controls {
+  width: 100%;
+}
+
+.colors div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.colors div h4 {
+  width: 25%;
+  text-align: left;
+}
+
+input[type="color"] {
+  margin: 0 20px;
+  width: 25%;
+
+}
+
+.animationControls {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
+@media screen and (max-width: 1200px) {
+  .upper {
+    flex-direction: column;
+  }
+  .logo {
+    margin-bottom: 20px;
+  }
+  h4, button, p {
+    font-size: 1rem;
+  }
+  button {
+    margin: 0;
+    margin-top: 5px;
+  }
+  .slider h4 {
+    width: 30%;
+  }
+  .slider p {
+    width: 10%; /* Example: Make it narrow for the value */
+  }
+
+  .input[type="range"] {
+    width: 60%;
+  }
+
+  .colors div {
+    align-items: space-between;
+  }
+
+  .colors div h4 {
+    width: 35%;
+    text-align: left;
+  }
+
+  input[type="color"] {
+    width: 50%;
+  }
+
+  button {
+    width: 100%;
+  }
+  
 }

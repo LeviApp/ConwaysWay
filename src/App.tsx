@@ -218,20 +218,21 @@ useEffect(() => {
 return (
   <>
     <div className="appWindow">
+      <div className="upper">
       <img className="logo" src={logo} alt="" />
+      <div className="controls">
       <section className="slider">
         <h4>Grid Size</h4>
-        <h4>{gridSize}</h4>
         <input type="range" min="4" max="100" onChange={gridSizeUpdate} />
+        <p>{gridSize}</p>
       </section>
       <section className="slider">
         <h4>Density</h4>
-        <h4>{densityPercent}%</h4>
         <input type="range" min="0" max="100" onChange={(event) => setDensityPercent(Number(event.target.value))} />
+        <p>{densityPercent}%</p>
       </section>
       <section className="slider">
         <h4>Speed</h4>
-        <h4>{(510 - speed) / 10}</h4>
         <input type="range" min="-50" max="50" step="1" onChange={(event) => {
         // 1. Get the slider's value (-50 to 50) as a number
         const sliderValue = Number(event.target.value);
@@ -241,14 +242,29 @@ return (
 
         // 3. Update the 'speed' state
         setSpeed(newSpeed);
-      }} />        
+      }} />
+      <p>{(510 - speed) / 10}</p>   
       </section>
       <section className="colors">
+        <div>
         <h4>Background Color</h4>
         <input onChange={(event) => setColors({...colors, backgroundColor: event.target.value})} type="color" />
+        </div>
+        <div>
         <h4>Light Color</h4>
         <input onChange={(event) => setColors({...colors, lightColor: event.target.value})} type="color" value={colors.lightColor} />
+        </div>
       </section>
+      </div>
+      </div>
+      <div className="lower">
+      <h4>Generation: {generation}</h4>
+      <section className="canvas" style={{ '--num-columns': gridSize }}>
+        {gridStatus.map((val, i) => {
+          return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} colors={colors} />;
+        })}
+      </section>
+      <section className="animationControls">
       <button onClick={() => setReset(true)}>Reset</button>
       <button onClick={() => {
         setLoop(prevLoop => {
@@ -283,12 +299,8 @@ return (
         return !pause
         })} className={pause ? "on" : ""}>Pause</button>
       <button onClick={() => {setEditVal()}} className={edit ? "on" : ""}>Edit</button>
-      <h4>Generation: {generation}</h4>
-      <section className="canvas" style={{ '--num-columns': gridSize }}>
-        {gridStatus.map((val, i) => {
-          return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} colors={colors} />;
-        })}
       </section>
+      </div>
     </div>
   </>
 )
