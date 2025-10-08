@@ -25,6 +25,7 @@ function App() {
   const [colors, setColors] = useState({ backgroundColor: "black", lightColor: "#FFD700"})
   const [densityPercent, setDensityPercent] = useState(50); 
   const [loop, setLoop] = useState(false); 
+  const [reverse, setReverse] = useState(false); 
   const [generationHistory, setGenerationHistory] = useState<any[]>([]); 
   const [generationHistoryKey, setGenerationHistoryKey] = useState<Record<string, boolean>>({});
 
@@ -36,6 +37,7 @@ function App() {
   const gridSizeUpdate = (event: any) => {
     setPause(false);
     setLoop(false);
+    setReverse(false)
     setGridSize(Number(event.target.value));
   };
 
@@ -106,26 +108,47 @@ function App() {
 
   const runUpdate = useCallback(() => {
     // -----------------------------------------------------------
-    // 1. LOOP BRANCH (No change needed here, as it works)
+    // 1. TIMELINE MOVEMENT (Loop or Reverse is active)
     // -----------------------------------------------------------
-    if (loop) {
+    if (loop || reverse) {
         let nextGenerationIndex;
-        if (generation === generationHistory.length - 1) {
-            nextGenerationIndex = 0;
+
+        if (reverse) {
+            // --- Moving Backwards (Decrementing) ---
+            if (generation === 0) {
+                if (loop) {
+                    // Reverse Loop ON: Wrap to the end
+                    nextGenerationIndex = generationHistory.length - 1;
+                } else {
+                    // Reverse Loop OFF: Stop and pause at the beginning (index 0)
+                    setPause(true); 
+                    return; // Stop the update entirely for this tick
+                }
+            } else {
+                // Decrement normally
+                nextGenerationIndex = generation - 1;
+            }
         } else {
-            nextGenerationIndex = generation + 1;
+            // --- Moving Forwards (Loop is ON, Reverse is OFF) ---
+            // This is the standard forward looping logic
+            if (generation === generationHistory.length - 1) {
+                nextGenerationIndex = 0;
+            } else {
+                nextGenerationIndex = generation + 1;
+            }
         }
         
+        // Apply the calculated index for both loop and reverse
         setGeneration(nextGenerationIndex);
         setGridStatus(generationHistory[nextGenerationIndex]);
         return; 
     } 
 
     // -----------------------------------------------------------
-    // 2. FORWARD RUN (Loop is OFF)
+    // 2. FORWARD RUN (Loop and Reverse are OFF) - Playback or Record
     // -----------------------------------------------------------
     
-    // --- A. PLAYBACK MODE (No change needed here, as it works) ---
+    // --- A. PLAYBACK MODE ---
     if (generation < generationHistory.length - 1) {
         const nextGenerationIndex = generation + 1;
         setGeneration(nextGenerationIndex);
@@ -133,7 +156,7 @@ function App() {
         return; 
     }
 
-    // --- B. RECORD MODE (Calculate and record a new generation) ---
+    // --- B. RECORD MODE ---
     
     // Step 1: Calculate the next state based on the CURRENT gridStatus
     const nextGrid = calculateNextGridStatus(gridStructureRef.current, gridStatus);
@@ -141,143 +164,134 @@ function App() {
     
     // Step 2: Cycle Detection
     if (generationHistoryKey[nextKey]) {
-        setLoop(true); 
-        setGeneration(0); 
-        // No grid update needed; gridStatus remains the same, loop takes over next tick.
+        setPause(true);
         return; 
     }
     
     // Step 3: Record and Advance
-    
-    // Record History: Must use functional update for concurrency
     setGenerationHistory(prevHistory => [...prevHistory, nextGrid]);
     setGenerationHistoryKey(prevKey => ({
         ...prevKey, 
         [nextKey]: true
     }));
 
-    // Synchronous Update 1: Grid Status
     setGridStatus(nextGrid);
-    
-    // Synchronous Update 2: Generation Count
     setGeneration(prevGen => prevGen + 1);
-
-    // No return is needed here, as we are not inside a functional update block
     
-}, [gridStructureRef, loop, generationHistory, generation, generationHistoryKey, gridStatus, setLoop, setGeneration, setGenerationHistory, setGenerationHistoryKey, setGridStatus]);
+}, [gridStructureRef, loop, reverse, generationHistory, generation, generationHistoryKey, gridStatus, setLoop, setReverse, setGeneration, setPause, setGenerationHistory, setGenerationHistoryKey, setGridStatus]);
 
-  useEffect(() => {
-    createGrid(gridSize)
-  }, [gridSize, densityPercent])
+useEffect(() => {
+  createGrid(gridSize)
+}, [gridSize, densityPercent])
 
-  useEffect(() => {
-    let timerId: ReturnType<typeof setTimeout> | null = null; // Declare for cleanup
+useEffect(() => {
+  let timerId: ReturnType<typeof setTimeout> | null = null;
 
-    // ⚠️ Safety: Only start the game loop after the initial grid has been created 
-    // and is no longer an empty array.
-    // ✅ Change 1: Check the length of the new state variable, gridStatus.
-    if (gridStatus.length > 0) {
-
-      // 1. Set up a single timer for the next game step.
-      timerId = setTimeout(() => {
-        // 2. Call the update function. 
-        // ✅ Change 3: Remove the 'reset' argument from runUpdate, 
-        //    as that logic is best handled outside the game loop.
-
-        if (reset || (!edit && gridStatus.every((status) => status === 0))) {
-          setEdit(false)
-          setPause(false)
-          setLoop(false)
-          createGrid(gridSize)
-        }
-        else if (edit) {
-          setGeneration(0)
-        }
-        else if (!pause) {
-          runUpdate();
-        }
-      }, speed);
-
-    }
-
-    // 🧹 Cleanup: Clear the timer when the component unmounts or dependencies change.
-    return () => {
-      if (timerId) {
-        clearTimeout(timerId);
+  if (gridStatus.length > 0) {
+    timerId = setTimeout(() => {
+      if (reset || (!edit && gridStatus.every((status) => status === 0))) {
+        setEdit(false)
+        setPause(false)
+        setLoop(false)
+        setReverse(false)
+        createGrid(gridSize)
       }
-    };
+      else if (edit) {
+        setGeneration(0)
+      }
+      else if (!pause) {
+        runUpdate();
+      }
+    }, speed);
+  }
 
-    // Dependencies: 
-    // 'generation' triggers the next loop iteration after runUpdate.
-    // 'runUpdate' is necessary because you call it inside the effect.
-    // ✅ Change 2: Replace 'grid' dependency with the new 'gridStatus' dependency.
-  }, [generation, gridStatus, pause, reset, edit, speed]);
+  return () => {
+    if (timerId) {
+      clearTimeout(timerId);
+    }
+  };
+
+}, [generation, gridStatus, pause, reset, edit, speed, loop, reverse, gridSize, densityPercent, createGrid, runUpdate]); // Added loop, reverse, gridSize, densityPercent, createGrid, runUpdate to dependencies for correctness
 
 
 
-  return (
-    <>
-      <div className="appWindow">
-        <img className="logo" src={logo} alt="" />
-        <section className="slider">
-          <h4>Grid Size</h4>
-          <h4>{gridSize}</h4>
-          <input type="range" min="4" max="100" onChange={gridSizeUpdate} />
-        </section>
-        <section className="slider">
-          <h4>Density</h4>
-          <h4>{densityPercent}%</h4>
-          <input type="range" min="0" max="100" onChange={(event) => setDensityPercent(Number(event.target.value))} />
-        </section>
-        <section className="slider">
-          <h4>Speed</h4>
-          <h4>{(510 - speed) / 10}</h4>
-          <input type="range" min="-50" max="50" step="1" onChange={(event) => {
-          // 1. Get the slider's value (-50 to 50) as a number
-          const sliderValue = Number(event.target.value);
+return (
+  <>
+    <div className="appWindow">
+      <img className="logo" src={logo} alt="" />
+      <section className="slider">
+        <h4>Grid Size</h4>
+        <h4>{gridSize}</h4>
+        <input type="range" min="4" max="100" onChange={gridSizeUpdate} />
+      </section>
+      <section className="slider">
+        <h4>Density</h4>
+        <h4>{densityPercent}%</h4>
+        <input type="range" min="0" max="100" onChange={(event) => setDensityPercent(Number(event.target.value))} />
+      </section>
+      <section className="slider">
+        <h4>Speed</h4>
+        <h4>{(510 - speed) / 10}</h4>
+        <input type="range" min="-50" max="50" step="1" onChange={(event) => {
+        // 1. Get the slider's value (-50 to 50) as a number
+        const sliderValue = Number(event.target.value);
 
-          // 2. Apply the formula: Speed_ms = 510 - (10 * Slider Value)
-          // This gives you the desired range: 
-          // -50 (Slowest) -> 1010ms
-          // 0   (Medium)  -> 510ms
-          // 50  (Fastest) -> 10ms
-          const newSpeed = 510 - (10 * sliderValue);
+        // 2. Apply the formula: Speed_ms = 510 - (10 * Slider Value)
+        const newSpeed = 510 - (10 * sliderValue);
 
-          // 3. Update the 'speed' state
-          setSpeed(newSpeed);
-        }} />        
-        </section>
-        <section className="colors">
-          <h4>Background Color</h4>
-          <input onChange={(event) => setColors({...colors, backgroundColor: event.target.value})} type="color" />
-          <h4>Light Color</h4>
-          <input onChange={(event) => setColors({...colors, lightColor: event.target.value})} type="color" value={colors.lightColor} />
-        </section>
-        <button onClick={() => setReset(true)}>Reset</button>
-        <button onClick={() => {
-          setLoop(prevLoop => {
-            if (prevLoop === false) {
+        // 3. Update the 'speed' state
+        setSpeed(newSpeed);
+      }} />        
+      </section>
+      <section className="colors">
+        <h4>Background Color</h4>
+        <input onChange={(event) => setColors({...colors, backgroundColor: event.target.value})} type="color" />
+        <h4>Light Color</h4>
+        <input onChange={(event) => setColors({...colors, lightColor: event.target.value})} type="color" value={colors.lightColor} />
+      </section>
+      <button onClick={() => setReset(true)}>Reset</button>
+      <button onClick={() => {
+        setLoop(prevLoop => {
+          if (!prevLoop) {
+            if (!pause) {
               setGeneration(0);
-              return true;
             }
-            else {
-              return false;
-            }
-          })
-          
-          }} className={loop ? "on" : ""}>Loop</button>
+            return true;
+          }
+          else {
+            return false;
+          }
+        })
+        
+        }} className={loop ? "on" : ""}>Loop</button>
+      <button onClick={() => setReverse((prevReverse) => {
+        if (!prevReverse && !pause && generation !== 0) {
+          // When turning reverse ON: Jump to the latest frame and pause for user control
+          setGeneration(generationHistory.length - 1);
+          // DO NOT change loop state here; let the user control loop separately.
+        }
+        return !prevReverse
+        })} className={reverse ? "on" : ""}>Reverse</button>
 
-        <button onClick={() => setPause(!pause)} className={pause ? "on" : ""}>Pause</button>
-        <button onClick={() => {setEditVal()}} className={edit ? "on" : ""}>Edit</button>
-        <h4>Generation: {generation}</h4>
-        <section className="canvas" style={{ '--num-columns': gridSize }}>
-          {gridStatus.map((val, i) => {
-            return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} colors={colors} />;
-          })}
-        </section>
-      </div>
-    </>
-  )
+      <button onClick={() => setPause((prevPause) => {
+        if (prevPause && !reverse && (generation === generationHistory.length || generation === generationHistory.length - 1)) {
+          setGeneration(0); 
+        }
+        else if (prevPause && reverse && !loop && generation === 0) {
+          setGeneration(generationHistory.length - 1); 
+        }
+        return !pause
+        })} className={pause ? "on" : ""}>Pause</button>
+      <button onClick={() => {setEditVal()}} className={edit ? "on" : ""}>Edit</button>
+      <h4>Generation: {generation}</h4>
+      <section className="canvas" style={{ '--num-columns': gridSize }}>
+        {gridStatus.map((val, i) => {
+          return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} colors={colors} />;
+        })}
+      </section>
+    </div>
+  </>
+)
 }
 
 export default App
