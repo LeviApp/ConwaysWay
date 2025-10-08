@@ -150,7 +150,6 @@ function App() {
     
     // --- A. PLAYBACK MODE ---
     if (generation < generationHistory.length - 1) {
-        console.log({generation})
         const nextGenerationIndex = generation + 1;
         setGeneration(nextGenerationIndex);
         setGridStatus(generationHistory[nextGenerationIndex]);
