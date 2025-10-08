@@ -24,12 +24,18 @@ function App() {
   const [speed, setSpeed] = useState(510)
   const [colors, setColors] = useState({ backgroundColor: "black", lightColor: "#FFD700"})
   const [densityPercent, setDensityPercent] = useState(50); 
+  const [loop, setLoop] = useState(false); 
+  const [generationHistory, setGenerationHistory] = useState<any[]>([]); 
+  const [generationHistoryKey, setGenerationHistoryKey] = useState<Record<string, boolean>>({});
+
+
 
   const gridStructureRef = useRef<Record<number, CellStructure>>({});
   const [gridStatus, setGridStatus] = useState<number[]>([]);
 
   const gridSizeUpdate = (event: any) => {
-    setPause(false)
+    setPause(false);
+    setLoop(false);
     setGridSize(Number(event.target.value));
   };
 
@@ -67,7 +73,8 @@ function App() {
 
     // 4. Update state with the new, random status array
     setGridStatus(initialStatus); // Use the new state setter
-
+    setGenerationHistory([initialStatus])
+    setGenerationHistoryKey({[JSON.stringify(initialStatus)]: true})
     // 5. Reset loop controls
     setGeneration(1);
     setReset(false);
@@ -78,6 +85,7 @@ function App() {
       if (!prevEdit) { // Check the value *before* the update (will be true)
         const finalGridCopy = new Array(gridStatus.length).fill(0);
         setGridStatus(finalGridCopy);
+        setLoop(false) // You correctly added this
       }
       return !prevEdit; // Return the toggled value
     });
@@ -96,15 +104,67 @@ function App() {
     setGridStatus(finalGridCopy)
   }
 
-  // 🛠️ NEW: The function that runs the logic and updates the state.
   const runUpdate = useCallback(() => {
-    setGridStatus(prevStatus => {
-      if (prevStatus.length === 0) return prevStatus;
-      // No change needed here, logic is sound.
-      return calculateNextGridStatus(gridStructureRef.current, prevStatus);
-    });
+    // -----------------------------------------------------------
+    // 1. LOOP BRANCH (No change needed here, as it works)
+    // -----------------------------------------------------------
+    if (loop) {
+        let nextGenerationIndex;
+        if (generation === generationHistory.length - 1) {
+            nextGenerationIndex = 0;
+        } else {
+            nextGenerationIndex = generation + 1;
+        }
+        
+        setGeneration(nextGenerationIndex);
+        setGridStatus(generationHistory[nextGenerationIndex]);
+        return; 
+    } 
+
+    // -----------------------------------------------------------
+    // 2. FORWARD RUN (Loop is OFF)
+    // -----------------------------------------------------------
+    
+    // --- A. PLAYBACK MODE (No change needed here, as it works) ---
+    if (generation < generationHistory.length - 1) {
+        const nextGenerationIndex = generation + 1;
+        setGeneration(nextGenerationIndex);
+        setGridStatus(generationHistory[nextGenerationIndex]);
+        return; 
+    }
+
+    // --- B. RECORD MODE (Calculate and record a new generation) ---
+    
+    // Step 1: Calculate the next state based on the CURRENT gridStatus
+    const nextGrid = calculateNextGridStatus(gridStructureRef.current, gridStatus);
+    const nextKey = JSON.stringify(nextGrid);
+    
+    // Step 2: Cycle Detection
+    if (generationHistoryKey[nextKey]) {
+        setLoop(true); 
+        setGeneration(0); 
+        // No grid update needed; gridStatus remains the same, loop takes over next tick.
+        return; 
+    }
+    
+    // Step 3: Record and Advance
+    
+    // Record History: Must use functional update for concurrency
+    setGenerationHistory(prevHistory => [...prevHistory, nextGrid]);
+    setGenerationHistoryKey(prevKey => ({
+        ...prevKey, 
+        [nextKey]: true
+    }));
+
+    // Synchronous Update 1: Grid Status
+    setGridStatus(nextGrid);
+    
+    // Synchronous Update 2: Generation Count
     setGeneration(prevGen => prevGen + 1);
-  }, [gridStructureRef]); // Dependency: Only changes if the structure reference changes
+
+    // No return is needed here, as we are not inside a functional update block
+    
+}, [gridStructureRef, loop, generationHistory, generation, generationHistoryKey, gridStatus, setLoop, setGeneration, setGenerationHistory, setGenerationHistoryKey, setGridStatus]);
 
   useEffect(() => {
     createGrid(gridSize)
@@ -127,6 +187,7 @@ function App() {
         if (reset || (!edit && gridStatus.every((status) => status === 0))) {
           setEdit(false)
           setPause(false)
+          setLoop(false)
           createGrid(gridSize)
         }
         else if (edit) {
@@ -193,8 +254,21 @@ function App() {
           <input onChange={(event) => setColors({...colors, lightColor: event.target.value})} type="color" value={colors.lightColor} />
         </section>
         <button onClick={() => setReset(true)}>Reset</button>
+        <button onClick={() => {
+          setLoop(prevLoop => {
+            if (prevLoop === false) {
+              setGeneration(0);
+              return true;
+            }
+            else {
+              return false;
+            }
+          })
+          
+          }} className={loop ? "on" : ""}>Loop</button>
+
         <button onClick={() => setPause(!pause)} className={pause ? "on" : ""}>Pause</button>
-        <button onClick={() => setEditVal()} className={edit ? "on" : ""}>Edit</button>
+        <button onClick={() => {setEditVal()}} className={edit ? "on" : ""}>Edit</button>
         <h4>Generation: {generation}</h4>
         <section className="canvas" style={{ '--num-columns': gridSize }}>
           {gridStatus.map((val, i) => {
