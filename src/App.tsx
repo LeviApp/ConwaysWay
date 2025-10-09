@@ -104,6 +104,8 @@ function App() {
     }
     finalGridCopy[index] = finalState;
     setGridStatus(finalGridCopy)
+    setGenerationHistory([finalGridCopy])
+    setGenerationHistoryKey({[JSON.stringify(finalGridCopy)]: true})
   }
 
   const runUpdate = useCallback(() => {
@@ -189,7 +191,7 @@ useEffect(() => {
 
   if (gridStatus.length > 0) {
     timerId = setTimeout(() => {
-      if (reset || (!edit && gridStatus.every((status) => status === 0))) {
+      if (reset) {
         setEdit(false)
         setPause(false)
         setLoop(false)
