@@ -16,7 +16,7 @@ function Light({edit, status, editGridStatus, index, colors}: MyComponentProps) 
   }
   return (
     <>
-        <div className={`${edit ? 'editMode' : ''}`}   style={ status ? { backgroundColor: colors.lightColor } : { backgroundColor: colors.backgroundColor }} onMouseOver={() => turnLight()}   onTouchStart={() => turnLight()}>
+        <div className={`${edit ? 'editMode' : ''}`}   style={ status ? { backgroundColor: colors.lightColor } : { backgroundColor: colors.backgroundColor }} onMouseOver={() => turnLight()}   onTouchMove={() => turnLight()}>
 
         </div>
     </>
