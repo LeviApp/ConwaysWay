@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
-import Light from "./components/Light.tsx"
+import Cell from "./components/Cell.tsx"
 import { createGridStructure, calculateNextGridStatus } from "./functions/CreateNeighbors.tsx";
 import logo from "./assets/ConwaysWayLogo.png"
 
@@ -18,14 +18,14 @@ type CellStructure = {
 function App() {
   const [gridSize, setGridSize] = useState(48)
   const [generation, setGeneration] = useState(0)
-  const [reset, setReset] = useState(false)
+  const [randomize, setRandomize] = useState(false)
   const [pause, setPause] = useState(false)
   const [edit, setEdit] = useState(false)
   const [speed, setSpeed] = useState(510)
-  const [colors, setColors] = useState({ backgroundColor: "black", lightColor: "#FFD700"})
+  const [colors, setColors] = useState({ offColor: "black", onColor: "#FFD700"})
   const [densityPercent, setDensityPercent] = useState(50); 
   const [loop, setLoop] = useState(false); 
-  const [reverse, setReverse] = useState(false); 
+  const [rewind, setRewind] = useState(false); 
   const [generationHistory, setGenerationHistory] = useState<any[]>([]); 
   const [generationHistoryKey, setGenerationHistoryKey] = useState<Record<string, boolean>>({});
 
@@ -37,7 +37,7 @@ function App() {
   const gridSizeUpdate = (event: any) => {
     setPause(false);
     setLoop(false);
-    setReverse(false)
+    setRewind(false)
     setGridSize(Number(event.target.value));
   };
 
@@ -78,8 +78,8 @@ function App() {
     setGenerationHistory([initialStatus])
     setGenerationHistoryKey({[JSON.stringify(initialStatus)]: true})
     // 5. Reset loop controls
-    setGeneration(1);
-    setReset(false);
+    setGeneration(0);
+    setRandomize(false);
   }
 
   const setEditVal = () => {
@@ -110,19 +110,19 @@ function App() {
 
   const runUpdate = useCallback(() => {
     // -----------------------------------------------------------
-    // 1. TIMELINE MOVEMENT (Loop or Reverse is active)
+    // 1. TIMELINE MOVEMENT (Loop or Rewind is active)
     // -----------------------------------------------------------
-    if (loop || reverse) {
+    if (loop || rewind) {
         let nextGenerationIndex;
 
-        if (reverse) {
+        if (rewind) {
             // --- Moving Backwards (Decrementing) ---
             if (generation === 0) {
                 if (loop) {
-                    // Reverse Loop ON: Wrap to the end
+                    // Rewind Loop ON: Wrap to the end
                     nextGenerationIndex = generationHistory.length - 1;
                 } else {
-                    // Reverse Loop OFF: Stop and pause at the beginning (index 0)
+                    // Rewind Loop OFF: Stop and pause at the beginning (index 0)
                     setPause(true); 
                     return; // Stop the update entirely for this tick
                 }
@@ -131,7 +131,7 @@ function App() {
                 nextGenerationIndex = generation - 1;
             }
         } else {
-            // --- Moving Forwards (Loop is ON, Reverse is OFF) ---
+            // --- Moving Forwards (Loop is ON, Rewind is OFF) ---
             // This is the standard forward looping logic
             if (generation === generationHistory.length - 1) {
                 nextGenerationIndex = 0;
@@ -140,14 +140,14 @@ function App() {
             }
         }
         
-        // Apply the calculated index for both loop and reverse
+        // Apply the calculated index for both loop and rewind
         setGeneration(nextGenerationIndex);
         setGridStatus(generationHistory[nextGenerationIndex]);
         return; 
     } 
 
     // -----------------------------------------------------------
-    // 2. FORWARD RUN (Loop and Reverse are OFF) - Playback or Record
+    // 2. FORWARD RUN (Loop and Rewind are OFF) - Playback or Record
     // -----------------------------------------------------------
     
     // --- A. PLAYBACK MODE ---
@@ -180,7 +180,7 @@ function App() {
     setGridStatus(nextGrid);
     setGeneration(prevGen => prevGen + 1);
     
-}, [gridStructureRef, loop, reverse, generationHistory, generation, generationHistoryKey, gridStatus, setLoop, setReverse, setGeneration, setPause, setGenerationHistory, setGenerationHistoryKey, setGridStatus]);
+}, [gridStructureRef, loop, rewind, generationHistory, generation, generationHistoryKey, gridStatus, setLoop, setRewind, setGeneration, setPause, setGenerationHistory, setGenerationHistoryKey, setGridStatus]);
 
 useEffect(() => {
   createGrid(gridSize)
@@ -191,11 +191,11 @@ useEffect(() => {
 
   if (gridStatus.length > 0) {
     timerId = setTimeout(() => {
-      if (reset) {
+      if (randomize) {
         setEdit(false)
         setPause(false)
         setLoop(false)
-        setReverse(false)
+        setRewind(false)
         createGrid(gridSize)
       }
       else if (edit) {
@@ -213,7 +213,7 @@ useEffect(() => {
     }
   };
 
-}, [generation, gridStatus, pause, reset, edit, speed, loop, reverse, gridSize, densityPercent, createGrid, runUpdate]); // Added loop, reverse, gridSize, densityPercent, createGrid, runUpdate to dependencies for correctness
+}, [generation, gridStatus, pause, randomize, edit, speed, loop, rewind, gridSize, densityPercent, createGrid, runUpdate]); // Added loop, rewind, gridSize, densityPercent, createGrid, runUpdate to dependencies for correctness
 
 
 
@@ -249,12 +249,12 @@ return (
       </section>
       <section className="colors">
         <div>
-        <h4>Background Color</h4>
-        <input onChange={(event) => setColors({...colors, backgroundColor: event.target.value})} type="color" />
+        <h4>Off Color</h4>
+        <input onChange={(event) => setColors({...colors, offColor: event.target.value})} type="color" />
         </div>
         <div>
-        <h4>Light Color</h4>
-        <input onChange={(event) => setColors({...colors, lightColor: event.target.value})} type="color" value={colors.lightColor} />
+        <h4>On Color</h4>
+        <input onChange={(event) => setColors({...colors, onColor: event.target.value})} type="color" value={colors.onColor} />
         </div>
       </section>
       </div>
@@ -263,11 +263,11 @@ return (
       <h4>Generation: {generation}</h4>
       <section className="canvas" style={{ '--num-columns': gridSize }}>
         {gridStatus.map((val, i) => {
-          return <Light key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} colors={colors} />;
+          return <Cell key={i} status={val} edit={edit} editGridStatus={editGridStatus} index={i} colors={colors} />;
         })}
       </section>
       <section className="animationControls">
-      <button onClick={() => setReset(true)}>Reset</button>
+      <button onClick={() => setRandomize(true)}>Randomize</button>
       <button onClick={() => {
         setLoop(prevLoop => {
           if (!prevLoop) {
@@ -282,20 +282,20 @@ return (
         })
         
         }} className={loop ? "on" : ""}>Loop</button>
-      <button onClick={() => setReverse((prevReverse) => {
-        if (!prevReverse && !pause && generation !== 0) {
-          // When turning reverse ON: Jump to the latest frame and pause for user control
+      <button onClick={() => setRewind((prevRewind) => {
+        if (!prevRewind && !pause && generation !== 0) {
+          // When turning rewind ON: Jump to the latest frame and pause for user control
           setGeneration(generationHistory.length - 1);
           // DO NOT change loop state here; let the user control loop separately.
         }
-        return !prevReverse
-        })} className={reverse ? "on" : ""}>Reverse</button>
+        return !prevRewind
+        })} className={rewind ? "on" : ""}>Rewind</button>
 
       <button onClick={() => setPause((prevPause) => {
-        if (prevPause && !reverse && (generation === generationHistory.length || generation === generationHistory.length - 1)) {
+        if (prevPause && !rewind && (generation === generationHistory.length || generation === generationHistory.length - 1)) {
           setGeneration(0); 
         }
-        else if (prevPause && reverse && !loop && generation === 0) {
+        else if (prevPause && rewind && !loop && generation === 0) {
           setGeneration(generationHistory.length - 1); 
         }
         return !pause
